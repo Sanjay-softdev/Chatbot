@@ -39,6 +39,9 @@ export default function ChatbotUI({ session }) {
   const taRef = useRef(null);
   const abortRef = useRef(null);
   const fileRef = useRef(null);
+  const chatScrollRef = useRef(null);
+  const userScrolledUp = useRef(false);
+  const [showScrollBtn, setShowScrollBtn] = useState(false);
 
   // Load conversations + profile
   useEffect(() => {
@@ -55,9 +58,32 @@ export default function ChatbotUI({ session }) {
     );
   }, [activeId]);
 
+  // Only auto-scroll to bottom if user hasn't manually scrolled up
   useEffect(() => {
-    msgEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    if (!userScrolledUp.current) {
+      msgEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    }
   }, [messages]);
+
+  // Detect user scroll — if near bottom, re-enable auto-scroll
+  const handleChatScroll = useCallback(() => {
+    const el = chatScrollRef.current;
+    if (!el) return;
+    const distFromBottom = el.scrollHeight - el.scrollTop - el.clientHeight;
+    if (distFromBottom > 120) {
+      userScrolledUp.current = true;
+      setShowScrollBtn(true);
+    } else {
+      userScrolledUp.current = false;
+      setShowScrollBtn(false);
+    }
+  }, []);
+
+  const scrollToBottom = () => {
+    userScrolledUp.current = false;
+    setShowScrollBtn(false);
+    msgEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  };
 
   const userInitials = (profile?.full_name || session?.user?.email || "U")
     .split(" ").map(w => w[0]).join("").toUpperCase().slice(0, 2);
@@ -375,7 +401,11 @@ export default function ChatbotUI({ session }) {
           </div>
 
           {/* Messages */}
-          <div style={{ flex: 1, overflowY: "auto", padding: "28px 0" }}>
+          <div
+            ref={chatScrollRef}
+            onScroll={handleChatScroll}
+            style={{ flex: 1, overflowY: "auto", padding: "28px 0", position: "relative" }}
+          >
             <div style={{ maxWidth: 740, margin: "0 auto", padding: "0 24px", display: "flex", flexDirection: "column", gap: 28 }}>
               {messages.length === 0
                 ? <WelcomeScreen onSuggest={send} />
@@ -391,6 +421,39 @@ export default function ChatbotUI({ session }) {
                 ))}
               <div ref={msgEndRef} />
             </div>
+
+            {/* Scroll-to-bottom button */}
+            {showScrollBtn && (
+              <button
+                onClick={scrollToBottom}
+                title="Scroll to latest message"
+                style={{
+                  position: "sticky",
+                  bottom: 16,
+                  left: "50%",
+                  transform: "translateX(-50%)",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 6,
+                  padding: "7px 16px",
+                  background: "rgba(99,102,241,0.18)",
+                  border: "1px solid rgba(99,102,241,0.4)",
+                  borderRadius: 20,
+                  color: "#818cf8",
+                  fontSize: 12.5,
+                  fontWeight: 600,
+                  fontFamily: "'DM Sans',sans-serif",
+                  cursor: "pointer",
+                  backdropFilter: "blur(8px)",
+                  boxShadow: "0 4px 16px rgba(0,0,0,0.4)",
+                  animation: "fadeUp 0.2s ease",
+                  zIndex: 10,
+                  whiteSpace: "nowrap",
+                }}
+              >
+                ↓ Latest message
+              </button>
+            )}
           </div>
 
           {/* Input */}
