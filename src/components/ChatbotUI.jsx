@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from "react";
-import { supabase, loadConversations, createConversation, loadMessages, insertMessage, deleteConversation, updateConversationTitle, getProfile, getToken } from "../supabase.js";
+import { supabase, loadConversations, createConversation, loadMessages, deleteConversation, updateConversationTitle, getProfile, getToken } from "../supabase.js";
 import { Icon, ICONS, Avatar, MessageRow, WelcomeScreen } from "./ChatComponents.jsx";
 
 let _id = 1000;
@@ -142,14 +142,10 @@ export default function ChatbotUI({ session }) {
       } catch (e) { setError(e.message); return; }
     }
 
-    // Insert user message to DB (with optional web context prepended)
-    let userMsg;
-    const fullText = webContext ? webContext + t : t;
-    try {
-      userMsg = await insertMessage(convId, "user", t); // save clean text
-    } catch (e) { setError(e.message); return; }
-
-    setMessages(p => [...p, { ...userMsg, streaming: false, attachmentNames: attachments.map(a=>a.name) }]);
+    // ── Optimistically show user message in UI right away ───────────────────────
+    // (Server will save to DB and send back the real id via userSaved SSE event)
+    const tempId = uid();
+    setMessages(p => [...p, { id: tempId, role: "user", content: t, streaming: false, created_at: new Date().toISOString() }]);
 
     // Streaming placeholder
     const streamId = uid();
@@ -167,7 +163,8 @@ export default function ChatbotUI({ session }) {
     // Stream from backend
     try {
       const token = await getToken();
-      const history = [...messages, { ...userMsg, streaming: false }];
+      // Build history: all previous messages (the user message will be added server-side)
+      const history = [...messages, { id: tempId, role: "user", content: t, streaming: false }];
       const ctrl = new AbortController();
       abortRef.current = ctrl;
 
@@ -176,11 +173,12 @@ export default function ChatbotUI({ session }) {
         headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
         body: JSON.stringify({
           messages: webContext
-            ? [...history.slice(0,-1), { ...history[history.length-1], content: fullText }]
+            ? [...history.slice(0,-1), { ...history[history.length-1], content: webContext + t }]
             : history,
           conversationId: convId,
           model: "mistral:7b",
           systemPrompt: reasoningMode ? REASONING_SYSTEM_PROMPT : undefined,
+          userMessage: t,   // server saves this to DB with service role key
         }),
         signal: ctrl.signal,
       });
@@ -202,6 +200,10 @@ export default function ChatbotUI({ session }) {
           try {
             const d = JSON.parse(raw);
             if (d.error) { setError(d.error); break; }
+            // Server confirmed user message saved — update tempId to real DB id
+            if (d.userSaved) {
+              setMessages(p => p.map(m => m.id === tempId ? { ...m, id: d.userSaved.id, created_at: d.userSaved.created_at } : m));
+            }
             if (d.content) {
               fullContent += d.content;
               setMessages(p => p.map(m => m.id === streamId ? { ...m, content: fullContent } : m));
@@ -221,7 +223,7 @@ export default function ChatbotUI({ session }) {
       }
     }
     setStreaming(false);
-  }, [input, streaming, activeId, messages]);
+  }, [input, streaming, activeId, messages, attachments, webSearchMode, reasoningMode]);
 
   const logout = async () => { await supabase.auth.signOut(); };
 

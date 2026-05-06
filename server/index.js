@@ -82,7 +82,7 @@ app.get("/api/search", requireAuth, async (req, res) => {
 // ── POST /api/chat/stream ─────────────────────────────────────────────────────
 // Streams Ollama response via SSE, saves assistant message to DB when done
 app.post("/api/chat/stream", requireAuth, async (req, res) => {
-  const { messages, conversationId, model = DEFAULT_MODEL, systemPrompt } = req.body;
+  const { messages, conversationId, model = DEFAULT_MODEL, systemPrompt, userMessage } = req.body;
 
   if (!messages?.length || !conversationId) {
     return res.status(400).json({ error: "messages and conversationId required" });
@@ -98,6 +98,29 @@ app.post("/api/chat/stream", requireAuth, async (req, res) => {
   const sendEvent = (data) => {
     res.write(`data: ${JSON.stringify(data)}\n\n`);
   };
+
+  // ── Save user message to DB first (service role → bypasses RLS) ─────────────
+  if (userMessage) {
+    const { data: savedMsg, error: msgErr } = await adminSupabase
+      .from("messages")
+      .insert({ conversation_id: conversationId, role: "user", content: userMessage })
+      .select()
+      .single();
+    if (msgErr) {
+      console.error("User message DB insert error:", msgErr.message);
+      sendEvent({ error: "Failed to save message: " + msgErr.message });
+      res.end();
+      return;
+    }
+    // Send the saved message back so the client can use the real DB id
+    sendEvent({ userSaved: savedMsg });
+
+    // ── Update conversation timestamp immediately ─────────────────────────────
+    await adminSupabase
+      .from("conversations")
+      .update({ updated_at: new Date().toISOString() })
+      .eq("id", conversationId);
+  }
 
   let fullContent = "";
 
