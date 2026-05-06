@@ -26,10 +26,8 @@ export const ICONS = {
   globe: ["M12 2a10 10 0 1 0 0 20A10 10 0 0 0 12 2z", "M2 12h20", "M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"],
   bolt: "M13 2L3 14h9l-1 8 10-12h-9l1-8z",
   share: ["M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8", "M16 6l-4-4-4 4", "M12 2v13"],
-  monitor: ["M2 3h20v14H2z", "M8 21h8", "M12 17v4"],
-  crown: "M2 20h20M5 20V9l7-5 7 5v11",
-  key: ["M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0 3 3L22 7l-3-3m-3.5 3.5L19 4"],
-  shield: "M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z",
+  check: "M20 6L9 17l-5-5",
+  externalLink: ["M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6", "M15 3h6v6", "M10 14L21 3"],
 };
 
 export const SUGGESTIONS = [
@@ -57,17 +55,141 @@ export function TypingDots() {
   );
 }
 
+// ── Code block with language label + copy button (ChatGPT style) ──────────────
+function CodeBlock({ code, lang }) {
+  const [copied, setCopied] = useState(false);
+  const copy = () => {
+    navigator.clipboard?.writeText(code);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+  return (
+    <div style={{ position: "relative", margin: "10px 0", borderRadius: 10, overflow: "hidden", border: "1px solid rgba(255,255,255,0.1)" }}>
+      {/* header bar */}
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "6px 14px", background: "rgba(255,255,255,0.06)", borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
+        <span style={{ fontSize: 11.5, color: "#6b6b85", fontFamily: "monospace", textTransform: "lowercase" }}>{lang || "code"}</span>
+        <button onClick={copy} style={{ display: "flex", alignItems: "center", gap: 5, background: "none", border: "none", color: copied ? "#4ade80" : "#6b6b85", cursor: "pointer", fontSize: 11.5, fontFamily: "'DM Sans',sans-serif", padding: "2px 6px", borderRadius: 6, transition: "color 0.15s" }}>
+          <Icon d={copied ? ICONS.check : ICONS.copy} size={12} />
+          {copied ? "Copied!" : "Copy code"}
+        </button>
+      </div>
+      {/* code body */}
+      <pre style={{ margin: 0, padding: "14px 16px", background: "rgba(0,0,0,0.35)", overflowX: "auto", fontSize: 13, lineHeight: 1.6, color: "#e2e8f0", fontFamily: "'Fira Code','Cascadia Code',monospace" }}>
+        <code>{code}</code>
+      </pre>
+    </div>
+  );
+}
+
+// ── Markdown renderer (supports code blocks, headers, lists, bold, italic) ────
+function renderMarkdown(text) {
+  const lines = text.split("\n");
+  const elements = [];
+  let i = 0;
+  let key = 0;
+
+  while (i < lines.length) {
+    const line = lines[i];
+
+    // Fenced code block
+    const fenceMatch = line.match(/^```(\w*)/);
+    if (fenceMatch) {
+      const lang = fenceMatch[1];
+      const codeLines = [];
+      i++;
+      while (i < lines.length && !lines[i].startsWith("```")) {
+        codeLines.push(lines[i]);
+        i++;
+      }
+      elements.push(<CodeBlock key={key++} code={codeLines.join("\n")} lang={lang} />);
+      i++; // skip closing ```
+      continue;
+    }
+
+    // Heading (order matters: most hashes first)
+    const h5 = line.match(/^##### (.+)/);
+    const h4 = line.match(/^#### (.+)/);
+    const h3 = line.match(/^### (.+)/);
+    const h2 = line.match(/^## (.+)/);
+    const h1 = line.match(/^# (.+)/);
+    if (h1) { elements.push(<h2 key={key++} style={{ fontSize: 19, fontWeight: 700, color: "#eeeef5", margin: "16px 0 6px", fontFamily: "'DM Sans',sans-serif" }} dangerouslySetInnerHTML={{ __html: inlineFormat(h1[1]) }} />); i++; continue; }
+    if (h2) { elements.push(<h3 key={key++} style={{ fontSize: 16, fontWeight: 700, color: "#d4d4e8", margin: "14px 0 4px", fontFamily: "'DM Sans',sans-serif" }} dangerouslySetInnerHTML={{ __html: inlineFormat(h2[1]) }} />); i++; continue; }
+    if (h3) { elements.push(<div key={key++} style={{ fontSize: 14.5, fontWeight: 700, color: "#c4c4dc", margin: "12px 0 3px", fontFamily: "'DM Sans',sans-serif" }} dangerouslySetInnerHTML={{ __html: inlineFormat(h3[1]) }} />); i++; continue; }
+    if (h4) { elements.push(<div key={key++} style={{ fontSize: 14, fontWeight: 600, color: "#b4b4cc", margin: "10px 0 2px", fontFamily: "'DM Sans',sans-serif" }} dangerouslySetInnerHTML={{ __html: inlineFormat(h4[1]) }} />); i++; continue; }
+    if (h5) { elements.push(<div key={key++} style={{ fontSize: 13.5, fontWeight: 600, color: "#9a9ab8", margin: "8px 0 2px", fontFamily: "'DM Sans',sans-serif" }} dangerouslySetInnerHTML={{ __html: inlineFormat(h5[1]) }} />); i++; continue; }
+
+    // Bullet list
+    if (line.match(/^[-*] /)) {
+      const items = [];
+      while (i < lines.length && lines[i].match(/^[-*] /)) {
+        items.push(<li key={i} style={{ marginBottom: 4 }} dangerouslySetInnerHTML={{ __html: inlineFormat(lines[i].slice(2)) }} />);
+        i++;
+      }
+      elements.push(<ul key={key++} style={{ paddingLeft: 20, margin: "6px 0", fontSize: 14.5, lineHeight: 1.7, color: "#d4d4e8" }}>{items}</ul>);
+      continue;
+    }
+
+    // Numbered list
+    if (line.match(/^\d+\. /)) {
+      const items = [];
+      while (i < lines.length && lines[i].match(/^\d+\. /)) {
+        items.push(<li key={i} style={{ marginBottom: 4 }} dangerouslySetInnerHTML={{ __html: inlineFormat(lines[i].replace(/^\d+\. /, "")) }} />);
+        i++;
+      }
+      elements.push(<ol key={key++} style={{ paddingLeft: 20, margin: "6px 0", fontSize: 14.5, lineHeight: 1.7, color: "#d4d4e8" }}>{items}</ol>);
+      continue;
+    }
+
+    // Horizontal rule
+    if (line.match(/^---+$/)) {
+      elements.push(<hr key={key++} style={{ border: "none", borderTop: "1px solid rgba(255,255,255,0.08)", margin: "12px 0" }} />);
+      i++; continue;
+    }
+
+    // Empty line
+    if (!line.trim()) {
+      elements.push(<div key={key++} style={{ height: 8 }} />);
+      i++; continue;
+    }
+
+    // Normal paragraph
+    elements.push(<p key={key++} style={{ margin: 0, fontSize: 14.5, lineHeight: 1.75, color: "#d4d4e8", fontFamily: "'DM Sans',sans-serif" }} dangerouslySetInnerHTML={{ __html: inlineFormat(line) }} />);
+    i++;
+  }
+
+  return elements;
+}
+
+function inlineFormat(text) {
+  return text
+    .replace(/`([^`]+)`/g, `<code style="background:rgba(99,102,241,0.18);padding:2px 7px;border-radius:5px;font-family:'Fira Code',monospace;font-size:12.5px;color:#c4b5fd">$1</code>`)
+    .replace(/\*\*(.+?)\*\*/g, "<strong style='color:#eeeef5'>$1</strong>")
+    .replace(/\*(.+?)\*/g, "<em>$1</em>")
+    .replace(/\[([^\]]+)\]\(([^)]+)\)/g, `<a href="$2" target="_blank" style="color:#818cf8;text-decoration:underline">$1</a>`);
+}
+
+// ── Source cards shown when web search is used ────────────────────────────────
+function SourceCards({ sources }) {
+  if (!sources?.length) return null;
+  return (
+    <div style={{ marginTop: 14 }}>
+      <div style={{ fontSize: 11, fontWeight: 700, color: "#4a4a62", textTransform: "uppercase", letterSpacing: "0.07em", marginBottom: 8 }}>🌐 Sources</div>
+      <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+        {sources.map((s, i) => (
+          <a key={i} href={s.url} target="_blank" rel="noopener noreferrer"
+            style={{ display: "flex", alignItems: "center", gap: 5, padding: "4px 10px", background: "rgba(34,197,94,0.07)", border: "1px solid rgba(34,197,94,0.2)", borderRadius: 20, fontSize: 11.5, color: "#4ade80", textDecoration: "none", fontFamily: "'DM Sans',sans-serif", maxWidth: 200, overflow: "hidden", whiteSpace: "nowrap", textOverflow: "ellipsis" }}>
+            <Icon d={ICONS.externalLink} size={10} />
+            {s.title || new URL(s.url).hostname}
+          </a>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 export function MessageRow({ msg, onRetry, userInitials }) {
   const isUser = msg.role === "user";
   const [copied, setCopied] = useState(false);
-  const [liked, setLiked] = useState(false);
-
-  const formatted = (msg.content || "")
-    .replace(/```([\s\S]*?)```/g, (_, code) => `<pre style="background:rgba(0,0,0,0.3);border:1px solid rgba(255,255,255,0.08);border-radius:8px;padding:12px 14px;overflow-x:auto;font-family:monospace;font-size:13px;margin:8px 0;line-height:1.5">${code.trim()}</pre>`)
-    .replace(/`([^`]+)`/g, "<code style=\"background:rgba(99,102,241,0.15);padding:2px 6px;border-radius:4px;font-family:monospace;font-size:13px\">$1</code>")
-    .replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>")
-    .replace(/\*(.*?)\*/g, "<em>$1</em>")
-    .replace(/\n/g, "<br/>");
 
   return (
     <div style={{ display: "flex", gap: 12, alignItems: "flex-start", flexDirection: isUser ? "row-reverse" : "row", animation: "fadeUp 0.28s ease" }}>
@@ -79,17 +201,27 @@ export function MessageRow({ msg, onRetry, userInitials }) {
           </div>
         )}
       <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", alignItems: isUser ? "flex-end" : "flex-start" }}>
-        <div style={{ maxWidth: isUser ? "78%" : "100%", background: isUser ? "linear-gradient(135deg,#6366f1,#4f46e5)" : "transparent", color: "#e8e8f0", padding: isUser ? "11px 16px" : "2px 0", borderRadius: isUser ? "18px 18px 4px 18px" : 0, fontSize: 14.5, lineHeight: 1.7, fontFamily: "'DM Sans',sans-serif" }}
-          dangerouslySetInnerHTML={{ __html: formatted }} />
-        {msg.streaming && <TypingDots />}
+        {isUser ? (
+          <div style={{ maxWidth: "78%", background: "linear-gradient(135deg,#6366f1,#4f46e5)", color: "#fff", padding: "11px 16px", borderRadius: "18px 18px 4px 18px", fontSize: 14.5, lineHeight: 1.7, fontFamily: "'DM Sans',sans-serif", whiteSpace: "pre-wrap" }}>
+            {msg.content}
+          </div>
+        ) : (
+          <div style={{ maxWidth: "100%", width: "100%" }}>
+            {msg.streaming && !msg.content ? <TypingDots /> : renderMarkdown(msg.content || "")}
+            {msg.sources && <SourceCards sources={msg.sources} />}
+          </div>
+        )}
+
+        {/* Action buttons for assistant */}
         {!isUser && !msg.streaming && msg.content && (
           <div style={{ display: "flex", gap: 6, marginTop: 10 }}>
             {[
-              { icon: ICONS.copy, label: copied ? "Copied!" : "Copy", action: () => { navigator.clipboard?.writeText(msg.content); setCopied(true); setTimeout(() => setCopied(false), 1800); } },
-              { icon: ICONS.thumbUp, label: liked ? "Liked" : "Like", action: () => setLiked(l => !l) },
-              { icon: ICONS.refresh, label: "Retry", action: onRetry },
-            ].map(({ icon, label, action }) => (
-              <button key={label} onClick={action} style={{ display: "flex", alignItems: "center", gap: 5, padding: "4px 10px", background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 8, color: (label === "Liked" || label === "Copied!") ? "#818cf8" : "#7c7c9a", fontSize: 12, cursor: "pointer", fontFamily: "'DM Sans',sans-serif", transition: "all 0.15s" }}>
+              { icon: copied ? ICONS.check : ICONS.copy, label: copied ? "Copied!" : "Copy", action: () => { navigator.clipboard?.writeText(msg.content); setCopied(true); setTimeout(() => setCopied(false), 1800); }, active: copied },
+              { icon: ICONS.refresh, label: "Retry", action: onRetry, active: false },
+            ].map(({ icon, label, action, active }) => (
+              <button key={label} onClick={action} style={{ display: "flex", alignItems: "center", gap: 5, padding: "4px 10px", background: active ? "rgba(99,102,241,0.1)" : "rgba(255,255,255,0.04)", border: `1px solid ${active ? "rgba(99,102,241,0.3)" : "rgba(255,255,255,0.08)"}`, borderRadius: 8, color: active ? "#818cf8" : "#7c7c9a", fontSize: 12, cursor: "pointer", fontFamily: "'DM Sans',sans-serif", transition: "all 0.15s" }}
+                onMouseEnter={e => { e.currentTarget.style.background = "rgba(99,102,241,0.1)"; e.currentTarget.style.color = "#818cf8"; }}
+                onMouseLeave={e => { if (!active) { e.currentTarget.style.background = "rgba(255,255,255,0.04)"; e.currentTarget.style.color = "#7c7c9a"; } }}>
                 <Icon d={icon} size={12} />{label}
               </button>
             ))}
