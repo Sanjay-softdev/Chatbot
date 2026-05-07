@@ -31,10 +31,10 @@ export const ICONS = {
 };
 
 export const SUGGESTIONS = [
-  { emoji: "⚛", title: "Explain quantum computing", sub: "in plain language" },
-  { emoji: "🐍", title: "Write a Python script", sub: "to scrape a website" },
-  { emoji: "✉", title: "Draft a professional email", sub: "to request a meeting" },
-  { emoji: "💡", title: "Give me 5 startup ideas", sub: "for the AI era" },
+  { emoji: "🏢", title: "Team Everest policies", sub: "internal guidelines" },
+  { emoji: "📊", title: "Project status update", sub: "from internal records" },
+  { emoji: "🔐", title: "Data security protocols", sub: "for Team Everest" },
+  { emoji: "⚡", title: "Quick search", sub: "web news & trends" },
 ];
 
 export function Avatar({ initials = "AI", size = 32, gradient = "linear-gradient(135deg,#6366f1,#3b82f6)" }) {
@@ -238,8 +238,8 @@ export function WelcomeScreen({ onSuggest }) {
       <div style={{ width: 56, height: 56, borderRadius: 16, background: "linear-gradient(135deg,#6366f1,#8b5cf6)", display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 20, boxShadow: "0 8px 32px rgba(99,102,241,0.35)" }}>
         <svg width={30} height={30} viewBox="0 0 24 24" fill="white"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 14H9V8h2v8zm4 0h-2V8h2v8z" /></svg>
       </div>
-      <h1 style={{ fontSize: 30, fontWeight: 700, color: "#eeeef5", margin: 0, fontFamily: "'Fraunces',serif", letterSpacing: "-0.02em" }}>What can I help with?</h1>
-      <p style={{ fontSize: 15, color: "#6b6b85", marginTop: 8, marginBottom: 32, fontFamily: "'DM Sans',sans-serif" }}>Ask me anything — or pick a suggestion below</p>
+      <h1 style={{ fontSize: 30, fontWeight: 700, color: "#eeeef5", margin: 0, fontFamily: "'Fraunces',serif", letterSpacing: "-0.02em" }}>Everest Intelligence</h1>
+      <p style={{ fontSize: 15, color: "#6b6b85", marginTop: 8, marginBottom: 32, fontFamily: "'DM Sans',sans-serif" }}>Your secure assistant for Team Everest documents & general chat</p>
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, width: "100%", maxWidth: 560 }}>
         {SUGGESTIONS.map(s => (
           <button key={s.title} onClick={() => onSuggest(`${s.title} ${s.sub}`)}

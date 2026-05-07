@@ -204,7 +204,9 @@ export default function ChatbotUI({ session }) {
           conversationId: convId,
           model: "mistral:7b",
           systemPrompt: reasoningMode ? REASONING_SYSTEM_PROMPT : undefined,
-          userMessage: t,   // server saves this to DB with service role key
+          userMessage: t,
+          ragMode: true, // Enable RAG by default for Team Everest context
+          webSearchMode: webSearchMode,
         }),
         signal: ctrl.signal,
       });
@@ -292,7 +294,7 @@ export default function ChatbotUI({ session }) {
               <div style={{ width: 30, height: 30, borderRadius: 8, background: "linear-gradient(135deg,#6366f1,#8b5cf6)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
                 <svg width={17} height={17} viewBox="0 0 24 24" fill="white"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 14H9V8h2v8zm4 0h-2V8h2v8z" /></svg>
               </div>
-              <span style={{ fontFamily: "'Fraunces',serif", fontWeight: 700, fontSize: 16, color: "#e8e8f0", letterSpacing: "-0.01em" }}>NovaMind</span>
+              <span style={{ fontFamily: "'Fraunces',serif", fontWeight: 700, fontSize: 16, color: "#e8e8f0", letterSpacing: "-0.01em" }}>Everest Intelligence</span>
             </div>
             <button onClick={newChat} title="New chat" style={{ width: 32, height: 32, background: "none", border: "none", color: "#6b6b85", cursor: "pointer", borderRadius: 8, display: "flex", alignItems: "center", justifyContent: "center", transition: "all 0.15s" }}
               onMouseEnter={e => { e.currentTarget.style.background = "rgba(255,255,255,0.06)"; e.currentTarget.style.color = "#d4d4e8"; }}
@@ -312,7 +314,7 @@ export default function ChatbotUI({ session }) {
           <button id="btn-new-chat" onClick={newChat} style={{ margin: "0 12px 10px", padding: "9px 12px", background: "rgba(99,102,241,0.1)", border: "1px solid rgba(99,102,241,0.25)", borderRadius: 10, color: "#818cf8", fontSize: 13.5, fontWeight: 600, display: "flex", alignItems: "center", gap: 8, cursor: "pointer", fontFamily: "'DM Sans',sans-serif", transition: "all 0.15s" }}
             onMouseEnter={e => e.currentTarget.style.background = "rgba(99,102,241,0.18)"}
             onMouseLeave={e => e.currentTarget.style.background = "rgba(99,102,241,0.1)"}>
-            <Icon d={ICONS.plus} size={16} />New chat
+            <Icon d={ICONS.plus} size={16} />New conversation
           </button>
 
           {/* Conversation list */}
@@ -520,7 +522,7 @@ export default function ChatbotUI({ session }) {
                     value={input}
                     onChange={e => { setInput(e.target.value); e.target.style.height = "auto"; e.target.style.height = Math.min(e.target.scrollHeight, 160) + "px"; }}
                     onKeyDown={e => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); send(); } }}
-                    placeholder={reasoningMode ? "Ask anything — I'll explain it simply… (Reasoning ON)" : webSearchMode ? "Search + ask… (Web Search ON)" : "Message NovaMind… (Enter to send, Shift+Enter for newline)"}
+                    placeholder={reasoningMode ? "Ask anything — I'll explain it simply… (Reasoning ON)" : webSearchMode ? "Search + ask… (Web Search ON)" : "Ask Everest Intelligence… (Enter to send, Shift+Enter for newline)"}
                     rows={1}
                     disabled={streaming}
                     style={{ flex: 1, background: "none", border: "none", outline: "none", color: "#e8e8f0", fontSize: 14.5, fontFamily: "'DM Sans',sans-serif", resize: "none", lineHeight: 1.65, padding: "3px 0", maxHeight: 160, overflowY: "auto", opacity: streaming ? 0.6 : 1 }}
@@ -539,7 +541,7 @@ export default function ChatbotUI({ session }) {
               <p style={{ textAlign: "center", fontSize: 11.5, color: "#3a3a52", marginTop: 8, fontFamily: "'DM Sans',sans-serif" }}>
                 {reasoningMode && <span style={{color:"#a855f7"}}>🧠 Reasoning ON · </span>}
                 {webSearchMode && <span style={{color:"#22c55e"}}>🌐 Web Search ON · </span>}
-                Powered by Mistral 7B via Ollama · Stored locally in Supabase · Fully private
+                Powered by Mistral 7B via Ollama · Everest Internal Storage · Fully Private
               </p>
             </div>
           </div>

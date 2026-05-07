@@ -253,7 +253,13 @@ app.post("/api/chat/stream", requireAuth, async (req, res) => {
   // ── RAG: embed query → similarity search → inject context ─────────────────
   let ragContext = "";
   let ragSources = [];
-  if (ragMode && userMessage) {
+  const triggerRag = ragMode || (userMessage && (
+    userMessage.toLowerCase().includes("team everest") ||
+    userMessage.toLowerCase().includes("project") ||
+    userMessage.toLowerCase().includes("internal policy")
+  ));
+
+  if (triggerRag && userMessage) {
     try {
       const qEmbed = await embedText(userMessage);
       const { data: chunks } = await adminSupabase.rpc("match_chunks", {
@@ -294,12 +300,18 @@ app.post("/api/chat/stream", requireAuth, async (req, res) => {
 - Mention if results are recent/dated where relevant
 - If the search results don't fully answer the question, say so and add what you know`;
 
-  const RAG_SYSTEM = `You are a knowledgeable assistant with access to the user's personal knowledge base.
-- Prioritize information from the provided context over your training data
-- Always cite which document you used: "According to [document name]..."
-- If context is insufficient, say so clearly and supplement with your own knowledge`;
+  const RAG_SYSTEM = `You are the "Everest Intelligence System," a private AI assistant for Team Everest.
+- If the user mentions "Team Everest," "projects," or "internal policy," you MUST prioritize the provided context.
+- Always cite sources: "According to internal records..." followed by the document name.
+- If the context is insufficient, state so and supplement with your knowledge.
+- Do NOT mention Mount Everest unless explicitly asked about the mountain.`;
 
-  const activeSystem = webContext ? WEB_SYSTEM : ragContext ? RAG_SYSTEM : systemPrompt;
+  const GENERAL_SYSTEM = `You are the "Everest Intelligence System," a private AI assistant for Team Everest. 
+- You handle general queries like ChatGPT but remain professional and secure.
+- For current events (2025/2026), you use web search results if provided.
+- For code, math, or jokes, answer directly and concisely.`;
+
+  const activeSystem = webContext ? WEB_SYSTEM : ragContext ? RAG_SYSTEM : GENERAL_SYSTEM;
   let fullContent = "";
 
   try {
